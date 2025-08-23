@@ -2,7 +2,11 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { insertSensorDataSchema, insertSystemSettingsSchema, insertActivityLogSchema } from "@shared/schema";
+import {
+  insertSensorDataSchema,
+  insertSystemSettingsSchema,
+  insertActivityLogSchema,
+} from "@shared/schema";
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -34,14 +38,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertSensorDataSchema.parse(req.body);
       const sensorData = await storage.createSensorData(validatedData);
-      
+
       // Broadcast to WebSocket clients
       broadcastSensorUpdate(sensorData);
-      
+
       res.status(201).json(sensorData);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Invalid sensor data", errors: error.errors });
+        res
+          .status(400)
+          .json({ message: "Invalid sensor data", errors: error.errors });
       } else {
         res.status(500).json({ message: "Failed to create sensor data" });
       }
@@ -59,23 +65,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/settings", async (req, res) => {
     try {
-      const validatedData = insertSystemSettingsSchema.partial().parse(req.body);
+      const validatedData = insertSystemSettingsSchema
+        .partial()
+        .parse(req.body);
       const settings = await storage.updateSystemSettings(validatedData);
-      
+
       // Broadcast settings update to WebSocket clients
       broadcastSettingsUpdate(settings);
-      
+
       // Log the settings change
       await storage.createActivityLog({
         type: "info",
         message: `System settings updated`,
         icon: "fas fa-cog",
       });
-      
+
       res.json(settings);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Invalid settings data", errors: error.errors });
+        res
+          .status(400)
+          .json({ message: "Invalid settings data", errors: error.errors });
       } else {
         res.status(500).json({ message: "Failed to update settings" });
       }
@@ -96,14 +106,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertActivityLogSchema.parse(req.body);
       const activity = await storage.createActivityLog(validatedData);
-      
+
       // Broadcast activity to WebSocket clients
       broadcastActivityUpdate(activity);
-      
+
       res.status(201).json(activity);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        res.status(400).json({ message: "Invalid activity data", errors: error.errors });
+        res
+          .status(400)
+          .json({ message: "Invalid activity data", errors: error.errors });
       } else {
         res.status(500).json({ message: "Failed to create activity log" });
       }
@@ -111,41 +123,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // WebSocket server setup
-  const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
-  
-  wss.on('connection', (ws: WebSocket) => {
-    console.log('WebSocket client connected');
-    
+  const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
+
+  wss.on("connection", (ws: WebSocket) => {
+    console.log("WebSocket client connected");
+
     // Send initial data to new client
     sendInitialData(ws);
-    
-    ws.on('message', async (message: Buffer) => {
+
+    ws.on("message", async (message: Buffer) => {
       try {
         const data = JSON.parse(message.toString());
-        
+
         // Handle different message types
         switch (data.type) {
-          case 'settings_update':
+          case "settings_update":
             const settings = await storage.updateSystemSettings(data.payload);
             broadcastSettingsUpdate(settings);
             break;
-            
-          case 'sensor_update':
+
+          case "sensor_update":
             const sensorData = await storage.createSensorData(data.payload);
             broadcastSensorUpdate(sensorData);
             break;
-            
-          case 'ping':
-            ws.send(JSON.stringify({ type: 'pong' }));
+
+          case "ping":
+            ws.send(JSON.stringify({ type: "pong" }));
             break;
         }
       } catch (error) {
-        console.error('WebSocket message error:', error);
+        console.error("WebSocket message error:", error);
       }
     });
-    
-    ws.on('close', () => {
-      console.log('WebSocket client disconnected');
+
+    ws.on("close", () => {
+      console.log("WebSocket client disconnected");
     });
   });
 
@@ -160,21 +172,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   function broadcastSensorUpdate(sensorData: any) {
     broadcastToAll({
-      type: 'sensor_update',
+      type: "sensor_update",
       payload: sensorData,
     });
   }
 
   function broadcastSettingsUpdate(settings: any) {
     broadcastToAll({
-      type: 'settings_update',
+      type: "settings_update",
       payload: settings,
     });
   }
 
   function broadcastActivityUpdate(activity: any) {
     broadcastToAll({
-      type: 'activity_update',
+      type: "activity_update",
       payload: activity,
     });
   }
@@ -187,16 +199,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storage.getActivityLog(10),
       ]);
 
-      ws.send(JSON.stringify({
-        type: 'initial_data',
-        payload: {
-          sensors,
-          settings,
-          activities,
-        },
-      }));
+      ws.send(
+        JSON.stringify({
+          type: "initial_data",
+          payload: {
+            sensors,
+            settings,
+            activities,
+          },
+        })
+      );
     } catch (error) {
-      console.error('Error sending initial data:', error);
+      console.error("Error sending initial data:", error);
     }
   }
 
@@ -204,12 +218,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   setInterval(async () => {
     try {
       // Simulate temperature fluctuations
-      const temperatureUpdate = await storage.createSensorData({
-        sensorType: "temperature",
-        value: 20 + Math.random() * 10, // 20-30°C
-        unit: "celsius",
-        status: "normal",
-      });
+      // const temperatureUpdate = await storage.createSensorData({
+      //   sensorType: "temperature",
+      //   value: 20 + Math.random() * 10, // 20-30°C
+      //   unit: "celsius",
+      //   status: "normal",
+      // });
+
+      // Instead of generating random temperature, get the latest stored temperature value
+      const latestSensors = await storage.getLatestSensorData();
+      const latestTemperature = latestSensors.find(
+        (s) => s.sensorType === "temperature"
+      );
+
+      if (latestTemperature) {
+        broadcastSensorUpdate(latestTemperature);
+      }
 
       // Simulate battery level changes
       const batteryUpdate = await storage.createSensorData({
@@ -220,14 +244,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Occasionally simulate motion detection
-      if (Math.random() < 0.1) { // 10% chance
+      if (Math.random() < 0.1) {
+        // 10% chance
         const motionUpdate = await storage.createSensorData({
           sensorType: "motion_pir",
           value: 1,
           unit: "boolean",
           status: "detected",
         });
-        
+
         await storage.createActivityLog({
           type: "warning",
           message: "Motion detected in living area",
@@ -235,11 +260,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      broadcastSensorUpdate(temperatureUpdate);
+      // broadcastSensorUpdate(temperatureUpdate);
       broadcastSensorUpdate(batteryUpdate);
-      
     } catch (error) {
-      console.error('Error simulating sensor updates:', error);
+      console.error("Error simulating sensor updates:", error);
     }
   }, 5000);
 
