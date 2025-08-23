@@ -1,20 +1,31 @@
-import { type User, type InsertUser, type SensorData, type InsertSensorData, type SystemSettings, type InsertSystemSettings, type ActivityLog, type InsertActivityLog } from "@shared/schema";
+import {
+  type User,
+  type InsertUser,
+  type SensorData,
+  type InsertSensorData,
+  type SystemSettings,
+  type InsertSystemSettings,
+  type ActivityLog,
+  type InsertActivityLog,
+} from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
+
   // Sensor data methods
   getLatestSensorData(sensorType?: string): Promise<SensorData[]>;
   createSensorData(data: InsertSensorData): Promise<SensorData>;
   getSensorHistory(sensorType: string, limit?: number): Promise<SensorData[]>;
-  
+
   // System settings methods
   getSystemSettings(): Promise<SystemSettings | undefined>;
-  updateSystemSettings(settings: Partial<InsertSystemSettings>): Promise<SystemSettings>;
-  
+  updateSystemSettings(
+    settings: Partial<InsertSystemSettings>
+  ): Promise<SystemSettings>;
+
   // Activity log methods
   getActivityLog(limit?: number): Promise<ActivityLog[]>;
   createActivityLog(log: InsertActivityLog): Promise<ActivityLog>;
@@ -30,7 +41,7 @@ export class MemStorage implements IStorage {
     this.users = new Map();
     this.sensorData = new Map();
     this.activityLogs = new Map();
-    
+
     // Initialize default system settings
     this.systemSettings = {
       id: randomUUID(),
@@ -63,7 +74,7 @@ export class MemStorage implements IStorage {
       { type: "power_consumption", value: 340, unit: "mA", status: "normal" },
     ];
 
-    sensorTypes.forEach(sensor => {
+    sensorTypes.forEach((sensor) => {
       const data: SensorData = {
         id: randomUUID(),
         sensorType: sensor.type,
@@ -77,11 +88,31 @@ export class MemStorage implements IStorage {
 
     // Add some initial activity logs
     const activities = [
-      { type: "info", message: "System armed successfully", icon: "fas fa-check-circle" },
-      { type: "warning", message: "Motion detected - snapshot taken", icon: "fas fa-camera" },
-      { type: "info", message: "Temperature normal (22°C)", icon: "fas fa-thermometer-half" },
-      { type: "info", message: "All entry points secured", icon: "fas fa-shield-alt" },
-      { type: "info", message: "Solar power system active", icon: "fas fa-solar-panel" },
+      {
+        type: "info",
+        message: "System armed successfully",
+        icon: "fas fa-check-circle",
+      },
+      {
+        type: "warning",
+        message: "Motion detected - snapshot taken",
+        icon: "fas fa-camera",
+      },
+      {
+        type: "info",
+        message: "Temperature normal (22°C)",
+        icon: "fas fa-thermometer-half",
+      },
+      {
+        type: "info",
+        message: "All entry points secured",
+        icon: "fas fa-shield-alt",
+      },
+      {
+        type: "info",
+        message: "Solar power system active",
+        icon: "fas fa-solar-panel",
+      },
     ];
 
     activities.forEach((activity, index) => {
@@ -102,7 +133,7 @@ export class MemStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
-      (user) => user.username === username,
+      (user) => user.username === username
     );
   }
 
@@ -116,22 +147,23 @@ export class MemStorage implements IStorage {
   async getLatestSensorData(sensorType?: string): Promise<SensorData[]> {
     const allData = Array.from(this.sensorData.values());
     if (sensorType) {
-      return allData.filter(data => data.sensorType === sensorType);
+      return allData.filter((data) => data.sensorType === sensorType);
     }
-    
+
     // Group by sensor type and return latest of each
     const latestBySensor = new Map<string, SensorData>();
-    allData.forEach(data => {
+    allData.forEach((data) => {
       const existing = latestBySensor.get(data.sensorType);
       if (!existing || data.timestamp > existing.timestamp) {
         latestBySensor.set(data.sensorType, data);
       }
     });
-    
+
     return Array.from(latestBySensor.values());
   }
 
   async createSensorData(data: InsertSensorData): Promise<SensorData> {
+    // console.log("createSensorData called with:", data); // Logger for debugging
     const id = randomUUID();
     const sensorData: SensorData = {
       ...data,
@@ -142,9 +174,12 @@ export class MemStorage implements IStorage {
     return sensorData;
   }
 
-  async getSensorHistory(sensorType: string, limit: number = 50): Promise<SensorData[]> {
+  async getSensorHistory(
+    sensorType: string,
+    limit: number = 50
+  ): Promise<SensorData[]> {
     return Array.from(this.sensorData.values())
-      .filter(data => data.sensorType === sensorType)
+      .filter((data) => data.sensorType === sensorType)
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
       .slice(0, limit);
   }
@@ -153,7 +188,9 @@ export class MemStorage implements IStorage {
     return this.systemSettings;
   }
 
-  async updateSystemSettings(settings: Partial<InsertSystemSettings>): Promise<SystemSettings> {
+  async updateSystemSettings(
+    settings: Partial<InsertSystemSettings>
+  ): Promise<SystemSettings> {
     if (this.systemSettings) {
       this.systemSettings = {
         ...this.systemSettings,
